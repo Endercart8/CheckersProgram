@@ -34,6 +34,6 @@ This project implements an AlphaZero-style reinforcement learning for checkers:
 2. Start the program
     python3 train.py
 3. Visit the website 
-    http://<Your-IP>:8080
+    http://Your-IP:8080
 
 [View a video explanation here](video link)
