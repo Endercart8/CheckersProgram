@@ -1,0 +1,190 @@
+<!-- public/index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Checkers Live</title>
+  <style>
+    body { font-family: sans-serif; display:flex; flex-direction:column; align-items:center; margin:20px; }
+    canvas { border: 2px solid #333; image-rendering: crisp-edges; }
+    #info { margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h2>Checkers - Live Viewer</h2>
+  <div id="mainMenu" style="text-align: center; margin-top: 20px;">
+    <button id="trainBtn">Train AI</button>
+    <button id="playBtn">Play AI</button>
+  </div>
+  <div id="inGameMenu" style="display: none; text-align: center; margin-top: 20px;">
+    <button id="backBtn">Back to Main Menu</button>
+  </div>
+  <canvas id="board" width="480" height="480"></canvas>
+  <div id="info">Waiting for data...</div>
+
+<script>
+const canvas = document.getElementById('board');
+const trainBtn = document.getElementById('trainBtn');
+const playBtn = document.getElementById('playBtn');
+const backBtn = document.getElementById('backBtn');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const size = 8;
+const cell = canvas.width / size;
+
+const wsProto = (location.protocol === 'https:') ? 'wss' : 'ws';
+const wsUrl = `${wsProto}://${location.hostname}:${location.port}`;
+const ws = new WebSocket(wsUrl);
+
+ws.onopen = () => info.textContent = 'Connected to server';
+ws.onclose = () => info.textContent = 'Disconnected';
+ws.onerror = (e) => console.error('WS error', e);
+
+// game state variables
+let currentBoard = null;
+let currentPlayer = null;
+let currentMoves = [];
+let selectedPiece = null;
+let highlightSquares = [];
+
+
+trainBtn.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'start_training' }));
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('inGameMenu').style.display = 'block';
+});
+playBtn.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'start_game' }));
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('inGameMenu').style.display = 'block';
+});
+backBtn.addEventListener('click', () => {
+    ws.send(JSON.stringify({ type: 'stop' }));
+    document.getElementById('mainMenu').style.display = 'block';
+    document.getElementById('inGameMenu').style.display = 'none';
+});
+
+// click handler
+canvas.addEventListener('click', (e) => {
+  if (!currentBoard || !currentMoves.length) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const c = Math.floor(x / cell);
+  const r = Math.floor(y / cell);
+
+  if (!selectedPiece) {
+    // first click: select a piece
+    const piece = currentBoard[r][c];
+    if ((currentPlayer === 1 && piece > 0) || (currentPlayer === -1 && piece < 0)) {
+      selectedPiece = [r, c];
+      highlightSquares = [];
+      // collect all destinations for this piece
+      currentMoves.forEach(mv => {
+        if (mv.from[0] === r && mv.from[1] === c) {
+          mv.path.forEach(dest => highlightSquares.push(dest));
+        }
+      });
+    }
+  } else {
+    // second click: try to make a move
+    let chosenMove = null;
+    currentMoves.forEach(mv => {
+        if (mv.from[0] === selectedPiece[0] && mv.from[1] === selectedPiece[1]) {
+            // check if clicked square is in the path
+            mv.path.forEach((dest, idx) => {
+            if (dest[0] === r && dest[1] === c) {
+                // choose the path up to this point (for multi-jumps)
+                chosenMove = {
+                from: mv.from,
+                path: mv.path.slice(0, idx + 1)
+                };
+            }
+            });
+        }
+    });
+    if (chosenMove) {
+      ws.send(JSON.stringify({ type: 'player_move', move: chosenMove }));
+    }
+    selectedPiece = null;
+    highlightSquares = [];
+  }
+  drawBoard(currentBoard, currentPlayer);
+});
+
+function drawBoard(board, current_player) {
+  // draw squares
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const dark = (r + c) % 2 === 1;
+      ctx.fillStyle = dark ? '#769656' : '#eeeed2';
+      ctx.fillRect(c * cell, r * cell, cell, cell);
+    }
+  }
+  // Not selecting a piece or did a move
+  if (!selectedPiece) {
+      highlightSquares = [];
+      // Collect all start positions for the legal moves
+      const starts = new Set();
+      currentMoves.forEach(mv => {
+          starts.add(`${mv.from[0]},${mv.from[1]}`);
+      });
+      starts.forEach(pos => {
+          const [sr, sc] = pos.split(",").map(Number);
+          highlightSquares.push([sr, sc]);
+      });
+  }
+  // highlight destinations
+  highlightSquares.forEach(([hr, hc]) => {
+    ctx.fillStyle = 'rgba(255,255,0,0.5)';
+    ctx.fillRect(hc * cell, hr * cell, cell, cell);
+  });
+  // draw pieces
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const v = board[r][c];
+      if (v === 0) continue;
+      const isWhite = v > 0;
+      const isKing = Math.abs(v) === 2;
+      ctx.beginPath();
+      const cx = c * cell + cell / 2;
+      const cy = r * cell + cell / 2;
+      ctx.fillStyle = isWhite ? '#fff' : '#000';
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 2;
+      ctx.arc(cx, cy, cell * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (isKing) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = `${cell * 0.45}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('K', cx, cy);
+      }
+    }
+  }
+  const turn = current_player === 1 ? 'White' : 'Black';
+  info.textContent = `Current player: ${turn} — Last updated: ${new Date().toLocaleTimeString()}`;
+}
+
+// receive messages
+ws.onmessage = (ev) => {
+  try {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'state') {
+      currentBoard = msg.board;
+      currentPlayer = msg.current_player;
+      currentMoves = msg.legal_moves || [];
+      drawBoard(currentBoard, currentPlayer);
+    } else {
+      console.log('msg', msg);
+    }
+  } catch (e) {
+    console.error('bad msg', e, ev.data);
+  }
+};
+</script>
+</body>
+</html>
