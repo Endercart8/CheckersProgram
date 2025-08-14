@@ -143,7 +143,7 @@ def play_self_play_game(model):
     mcts = MCTS(game, model)
 
     ws = websocket.WebSocket()
-    ws.connect("ws://192.168.137.116:8080/python")  # match server route
+    ws.connect("ws://0.0.0.0:8080/python")
 
     root = Node(state)
     states, mcts_policies, rewards = [], [], []
@@ -191,7 +191,7 @@ def play_self_play_game(model):
         #send state with websockets
         legal_moves = env.get_legal_moves(env.board.copy(), env.current_player)
         ###ws.send_state(state[0], state[1], legal_moves)
-        push_state_ws(ws, state, game)
+        push_state_ws(ws, state, game, False)
 
         if done:
             break
@@ -209,13 +209,13 @@ def play_vs_human(model):
     env = CheckersEnv()
     state = env.reset()
     game = env
-    mcts = MCTS(game, model, n_simulations=200)
+    mcts = MCTS(game, model, n_simulations=300)
 
     ws = websocket.WebSocket()
-    ws.connect("ws://192.168.137.116:8080/python")  # match server route
+    ws.connect("ws://0.0.0.0:8080/python")
 
     # Send initial board state to browser
-    push_state_ws(ws, state, game)
+    push_state_ws(ws, state, game, True)
 
     # Game loop
     while True:
@@ -226,7 +226,7 @@ def play_vs_human(model):
             move = (tuple(move_dict["from"]), [tuple(pos) for pos in move_dict["path"]])
             state, reward, done, _ = env.step(move)
 
-            push_state_ws(ws, state, game)
+            push_state_ws(ws, state, game, True)
 
             if done:
                 break
@@ -239,13 +239,13 @@ def play_vs_human(model):
             best_move = max(root.children.items(), key=lambda kv: kv[1].visit_count)[0]
             state, reward, done, _ = env.step(best_move)
 
-            push_state_ws(ws, state, game)
+            push_state_ws(ws, state, game, True)
 
             if done:
                 break
         elif msg["type"] == "stop":
             state = env.reset()
-            push_state_ws(ws, state, env)
+            push_state_ws(ws, state, env, False)
             chooseGame()
             break
     # Finished game loop
@@ -254,16 +254,17 @@ def play_vs_human(model):
         push_state_ws(ws, state, game)
         if msg["type"] == "stop":
             state = env.reset()
-            push_state_ws(ws, state, env)
+            push_state_ws(ws, state, env, False)
             chooseGame()
             break
 
     ws.close()
 
-def push_state_ws(ws, state, game):
+def push_state_ws(ws, state, game, vs_human):
     ws.send(json.dumps({
         "type": "state",
         "board": state[0].tolist(),
         "current_player": state[1],
-        "legal_moves": [{"from": mv[0], "path": mv[1]} for mv in game.get_legal_moves(game.board.copy(), game.current_player)]
+        "legal_moves": [{"from": mv[0], "path": mv[1]} for mv in game.get_legal_moves(game.board.copy(), game.current_player)],
+        "vs_human": vs_human
     }))

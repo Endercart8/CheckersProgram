@@ -46,6 +46,7 @@ let currentPlayer = null;
 let currentMoves = [];
 let selectedPiece = null;
 let highlightSquares = [];
+let vs_human = false;
 
 
 trainBtn.addEventListener('click', () => {
@@ -66,7 +67,7 @@ backBtn.addEventListener('click', () => {
 
 // click handler
 canvas.addEventListener('click', (e) => {
-  if (!currentBoard || !currentMoves.length) return;
+  if (!currentBoard || !currentMoves.length || !vs_human) return;
 
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -110,10 +111,10 @@ canvas.addEventListener('click', (e) => {
     selectedPiece = null;
     highlightSquares = [];
   }
-  drawBoard(currentBoard, currentPlayer);
+  drawBoard(currentBoard, currentPlayer, vs_human);
 });
 
-function drawBoard(board, current_player) {
+function drawBoard(board, current_player, vs_human) {
   // draw squares
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
@@ -136,10 +137,12 @@ function drawBoard(board, current_player) {
       });
   }
   // highlight destinations
-  highlightSquares.forEach(([hr, hc]) => {
-    ctx.fillStyle = 'rgba(255,255,0,0.5)';
-    ctx.fillRect(hc * cell, hr * cell, cell, cell);
-  });
+  if (vs_human) {
+    highlightSquares.forEach(([hr, hc]) => {
+      ctx.fillStyle = 'rgba(255,255,0,0.5)';
+      ctx.fillRect(hc * cell, hr * cell, cell, cell);
+    });
+  }
   // draw pieces
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
@@ -177,7 +180,8 @@ ws.onmessage = (ev) => {
       currentBoard = msg.board;
       currentPlayer = msg.current_player;
       currentMoves = msg.legal_moves || [];
-      drawBoard(currentBoard, currentPlayer);
+      vs_human = msg.vs_human;
+      drawBoard(currentBoard, currentPlayer, vs_human);
     } else {
       console.log('msg', msg);
     }

@@ -140,7 +140,7 @@ def train(training=True):
 
 def chooseGame():
     ws = websocket.WebSocket()
-    ws.connect("ws://192.168.137.116:8080/python")  # match server route
+    ws.connect("ws://0.0.0.0:8080/python")
 
     while True:
         msg = json.loads(ws.recv())  # Wait for player button choise

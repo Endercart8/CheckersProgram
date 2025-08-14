@@ -2,7 +2,7 @@ import json
 import websocket  # websocket-client package
 import time
 
-WS_URL = "ws://192.168.137.116:8080"  # use your server IP if remote
+WS_URL = "ws://0.0.0.0:8080"
 
 class WSClient:
     def __init__(self, url=WS_URL):
@@ -26,7 +26,8 @@ class WSClient:
             "type": "state",
             "board": board.tolist() if hasattr(board, 'tolist') else board,
             "current_player": int(current_player),
-            "legal_moves": legal_moves
+            "legal_moves": legal_moves,
+            "vs_human": vs_human
         }
         try:
             self.ws.send(json.dumps(msg))
@@ -38,7 +39,3 @@ class WSClient:
         if self.ws:
             self.ws.close()
             self.ws = None
-
-# Example usage in your self-play:
-# ws = WSClient("ws://192.168.1.5:8080")
-# ws.send_state(env.board, env.current_player, last_move=((r0,c0),(r1,c1)))
