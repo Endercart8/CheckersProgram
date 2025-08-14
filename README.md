@@ -36,4 +36,4 @@ This project implements an AlphaZero-style reinforcement learning for checkers:
 3. Visit the website 
     http://Your-IP:8080
 
-[View a video explanation here](video link)
+https://youtu.be/U8uM83fzIME
