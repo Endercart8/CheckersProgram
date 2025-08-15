@@ -189,6 +189,8 @@ class CheckersEnv:
         Executes a move without changing turns.
         Handles captures and kinging.
         """
+        hasKinged = False
+
         (start_r, start_c), path = move
         piece = board[start_r, start_c]
         board[start_r, start_c] = EMPTY
@@ -199,14 +201,19 @@ class CheckersEnv:
             if abs(nr - r) == 2:
                 board[(r + nr) // 2, (c + nc) // 2] = EMPTY
             r, c = nr, nc
-
-        board[r, c] = piece
-
+            # Check if it becomes a king
+            if piece == WHITE_PAWN and r == 0:
+                hasKinged = True
+            elif piece == BLACK_PAWN and r == 7:
+                hasKinged = True
+                
         # Kinging
-        if piece == WHITE_PAWN and r == 0:
+        if piece == WHITE_PAWN and hasKinged:
             board[r, c] = WHITE_KING
-        elif piece == BLACK_PAWN and r == 7:
+        elif piece == BLACK_PAWN and hasKinged:
             board[r, c] = BLACK_KING
+        else:
+            board[r, c] = piece
 
     def render(self):
         """

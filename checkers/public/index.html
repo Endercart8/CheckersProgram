@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Checkers Live</title>
+  <title>CheckersNet</title>
   <style>
     body { font-family: sans-serif; display:flex; flex-direction:column; align-items:center; margin:20px; }
     canvas { border: 2px solid #333; image-rendering: crisp-edges; }
@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <h2>Checkers - Live Viewer</h2>
+  <h2>CheckersNet</h2>
   <div id="mainMenu" style="text-align: center; margin-top: 20px;">
     <button id="trainBtn">Train AI</button>
     <button id="playBtn">Play AI</button>
@@ -74,21 +74,8 @@ canvas.addEventListener('click', (e) => {
   const y = e.clientY - rect.top;
   const c = Math.floor(x / cell);
   const r = Math.floor(y / cell);
-
-  if (!selectedPiece) {
-    // first click: select a piece
-    const piece = currentBoard[r][c];
-    if ((currentPlayer === 1 && piece > 0) || (currentPlayer === -1 && piece < 0)) {
-      selectedPiece = [r, c];
-      highlightSquares = [];
-      // collect all destinations for this piece
-      currentMoves.forEach(mv => {
-        if (mv.from[0] === r && mv.from[1] === c) {
-          mv.path.forEach(dest => highlightSquares.push(dest));
-        }
-      });
-    }
-  } else {
+  
+  if (selectedPiece) {
     // second click: try to make a move
     let chosenMove = null;
     currentMoves.forEach(mv => {
@@ -110,6 +97,19 @@ canvas.addEventListener('click', (e) => {
     }
     selectedPiece = null;
     highlightSquares = [];
+  }
+
+  // Select a piece
+  const piece = currentBoard[r][c];
+  if ((currentPlayer === 1 && piece > 0) || (currentPlayer === -1 && piece < 0)) {
+    selectedPiece = [r, c];
+    highlightSquares = [];
+    // collect all destinations for this piece
+    currentMoves.forEach(mv => {
+      if (mv.from[0] === r && mv.from[1] === c) {
+        mv.path.forEach(dest => highlightSquares.push(dest));
+      }
+    });
   }
   drawBoard(currentBoard, currentPlayer, vs_human);
 });

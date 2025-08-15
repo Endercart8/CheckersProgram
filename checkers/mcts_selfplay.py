@@ -178,8 +178,7 @@ def play_self_play_game(model):
 
         # Sample action proportionally to visit counts with a temperature
         move_number = len(states)
-        #temperature = 2 + (0.5 - 2) * min(move_number / 100, 1.0) #temperature starts at 2 and decreaces to 0.5 after 100 moves
-        temperature = 2
+        temperature = 2 + (0.5 - 2) * min(move_number / 100, 1.0) #temperature starts at 2 and decreaces to 0.5 after 100 moves
         policy_temp = np.power(policy, 1 / temperature)
         policy_temp /= policy_temp.sum()
         action = random.choices(list(root.children.keys()), weights=policy_temp, k=1)[0]
@@ -251,7 +250,7 @@ def play_vs_human(model):
     # Finished game loop
     while (True):
         msg = json.loads(ws.recv()) 
-        push_state_ws(ws, state, game)
+        push_state_ws(ws, state, game, False)
         if msg["type"] == "stop":
             state = env.reset()
             push_state_ws(ws, state, env, False)
